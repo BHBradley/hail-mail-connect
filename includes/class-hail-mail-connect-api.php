@@ -289,8 +289,12 @@ class Hail_Mail_Connect_API {
             // Hail rotates the refresh token on each use — always store the latest.
             'refresh_token'  => ! empty( $body['refresh_token'] ) ? $body['refresh_token'] : $tokens['refresh_token'],
             'expires_at'     => time() + intval( $body['expires_in'] ),
-            // Preserve previously-captured scopes if the refresh response omits them.
-            'granted_scopes' => self::parse_scopes( $body['scope'] ?? '' ) ?: $this->get_granted_scopes(),
+            // Scopes are established at connect. A refresh response may omit or narrow
+            // the `scope` field (Hail can drop `studio` on refresh) — overwriting here
+            // would silently downgrade writes from the studio (no-opt-in) path to the
+            // verifying content.write path. So KEEP the captured set; only adopt the
+            // refresh's scope if we somehow have none stored.
+            'granted_scopes' => $this->get_granted_scopes() ?: self::parse_scopes( $body['scope'] ?? '' ),
         );
 
         update_option( HAIL_MAIL_CONNECT_TOKENS_KEY, $new_tokens );
