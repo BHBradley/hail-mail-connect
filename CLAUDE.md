@@ -46,9 +46,9 @@ separate git repos, so a site may have one without the other.
 
 ## `[hail_mail_subscribe]` (item 5)
 
-Logged-in WP user self-manages list membership. **Adds prefer the studio endpoint** (`studio_add_subscribers`, no verification) when `has_scope('studio')`, else fall back to `content.write` create (which triggers Hail email verification). Removes use `content.write` (soft unsubscribe). Email is read server-side from the current user (never the request). Submitted ids validated against the org's subscribable set (`show_on_outputs`, non-SMS). Attrs: `lists` (restrict offered ids), `title`, `button`, `login` (`form` = native `wp_login_form` for logged-out visitors [default], `link` = wp-login link, `none`). Currently renders for **all** logged-in users (admins included). Hail rejects undeliverable domains (e.g. `@example.com`) with "Not a good contact email address" — test with real/Gmail `+alias` addresses.
+Logged-in WP user self-manages list membership. **Members-only** — renders nothing for logged-out visitors (the previous `login`/`wp_login_form` prompt was removed). **Adds prefer the studio endpoint** (`studio_add_subscribers`, no verification) when `has_scope('studio')`, else fall back to `content.write` create (which triggers Hail email verification). Removes use `content.write` (soft unsubscribe). Email is read server-side from the current user (never the request). Submitted ids validated against the org's subscribable set (`show_on_outputs`, non-SMS). Attrs: `lists` (restrict offered ids), `title` (heading), `button`. Currently renders for **all** logged-in users (admins included). Hail rejects undeliverable domains (e.g. `@example.com`) with "Not a good contact email address" — test with real/Gmail `+alias` addresses.
 
-**WP-core-only, no membership-plugin dependency.** Logged-out login uses WordPress's native `wp_login_form()` — NOT RCP or any SaaS/membership plugin. (An earlier RCP `[login_form]` auto-detection was removed per [[hmc-wp-core-only]].)
+**WP-core-only, no membership-plugin dependency** ([[hmc-wp-core-only]]).
 
 ## Resolved
 

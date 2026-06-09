@@ -19,7 +19,7 @@ both, or neither.
   - **All Subscribers** — the list's Hail subscribers, each matched to a WP user by
     email, with status (subscribed / unsubscribed / bounced / etc.).
 - **Self-service shortcode** `[hail_mail_subscribe]` — a logged-in member chooses which
-  lists to join or leave; logged-out visitors get a native WordPress login form.
+  lists to join or leave. Members-only (renders nothing for logged-out visitors).
 - **WordPress-core only** — no dependency on Restrict Content Pro or any other
   membership/SaaS plugin. User data comes from WP core (`WP_User_Query`).
 
@@ -89,8 +89,8 @@ Add the shortcode to any page:
 ```
 
 A logged-in member sees the available lists with their current memberships pre-ticked
-and can update them. Logged-out visitors get a WordPress login form and return to the
-page after signing in.
+and can update them. The form is **members-only** — it renders nothing for logged-out
+visitors.
 
 **Attributes**
 
@@ -99,7 +99,6 @@ page after signing in.
 | `lists` | (all subscribable) | Comma-separated list IDs to offer. |
 | `title` | "Manage your email subscriptions" | Heading text. |
 | `button` | "Save preferences" | Submit button label. |
-| `login` | `form` | Logged-out behaviour: `form` (native WP login form), `link` (login link), or `none`. |
 
 Only lists flagged as publicly subscribable in Hail are offered, and a member can only
 ever change **their own** subscriptions.
