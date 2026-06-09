@@ -151,14 +151,23 @@ class Hail_Mail_Connect_Shortcodes {
         $to_add     = array_diff( $desired, $current );
         $to_remove  = array_diff( $current, $desired );
 
-        // The whole point of this plugin: add subscribers WITHOUT the verification /
-        // double-opt-in flow. The studio endpoint does that. The content.write create
-        // path (createInOrganisation) dispatches Hail's VerifyEmailJob, leaving the
-        // contact pending — so only use it as a fallback when studio isn't granted.
         $use_studio = $api->has_scope( 'studio' );
 
         foreach ( $to_add as $list_id ) {
-            if ( $use_studio ) {
+            if ( $contact_id ) {
+                // EXISTING contact (always the case on re-subscribe): reactivate via the
+                // content.write add-existing endpoint, which upserts the pivot with
+                // unsubscribed_date = null AND removed_at = null — a full reactivation.
+                // We must NOT use studio here: its addMailList only clears removed_at and
+                // leaves unsubscribed_date set, so a previously-unsubscribed member would
+                // stay "Unsubscribed" and the checkbox would never stick. No opt-in email
+                // is sent for an existing contact (no createContact / VerifyEmailJob).
+                $r = $api->add_existing_subscribers_to_list( $list_id, array( $contact_id ) );
+                if ( is_wp_error( $r ) ) {
+                    $errors[] = $this->log_op_error( 'add ' . $list_id, $r );
+                }
+            } elseif ( $use_studio ) {
+                // BRAND-NEW contact: studio bypasses the opt-in / verification flow.
                 $r = $api->studio_add_subscribers( $list_id, array( array(
                     'email'      => $email,
                     'first_name' => $user->first_name,
@@ -176,13 +185,8 @@ class Hail_Mail_Connect_Shortcodes {
                         }
                     }
                 }
-            } elseif ( $contact_id ) {
-                $r = $api->add_existing_subscribers_to_list( $list_id, array( $contact_id ) );
-                if ( is_wp_error( $r ) ) {
-                    $errors[] = $this->log_op_error( 'add ' . $list_id, $r );
-                }
             } else {
-                // No studio: fall back to the verifying create endpoint (one list each).
+                // Brand-new contact, no studio: fall back to the verifying create endpoint.
                 $r = $api->create_subscriber( $email, $user->first_name, $user->last_name, array( $list_id ), true );
                 if ( is_wp_error( $r ) ) {
                     $errors[] = $this->log_op_error( 'create ' . $list_id, $r );

@@ -348,20 +348,33 @@ class Hail_Mail_Connect_Lists {
                 $want  = in_array( $email, $checked, true );
 
                 if ( $want && ! $is ) {
-                    if ( ! $has_studio ) {
+                    if ( $entry && ! empty( $entry['id'] ) ) {
+                        // Existing contact/membership (e.g. previously unsubscribed):
+                        // reactivate via content.write add-existing, which clears both
+                        // unsubscribed_date and removed_at. studio's addMailList only
+                        // clears removed_at, leaving the member "Unsubscribed".
+                        $r = $api->add_existing_subscribers_to_list( $list_id, array( $entry['id'] ) );
+                        if ( is_wp_error( $r ) ) {
+                            $failed++;
+                        } else {
+                            $added++;
+                        }
+                    } elseif ( $has_studio ) {
+                        // Brand-new contact: studio bypasses opt-in / verification.
+                        $wp_user = get_user_by( 'email', $email );
+                        $r = $api->studio_add_subscribers( $list_id, array( array(
+                            'email'      => $email,
+                            'first_name' => $wp_user ? $wp_user->first_name : '',
+                            'last_name'  => $wp_user ? $wp_user->last_name : '',
+                        ) ) );
+                        if ( is_wp_error( $r ) ) {
+                            $failed++;
+                        } else {
+                            $added++;
+                        }
+                    } else {
                         $blocked++;
                         continue;
-                    }
-                    $wp_user = get_user_by( 'email', $email );
-                    $r = $api->studio_add_subscribers( $list_id, array( array(
-                        'email'      => $email,
-                        'first_name' => $wp_user ? $wp_user->first_name : '',
-                        'last_name'  => $wp_user ? $wp_user->last_name : '',
-                    ) ) );
-                    if ( is_wp_error( $r ) ) {
-                        $failed++;
-                    } else {
-                        $added++;
                     }
                 } elseif ( ! $want && $is ) {
                     $r = $api->remove_subscribers_from_list( $list_id, array( $entry['id'] ) );
