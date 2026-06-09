@@ -8,3 +8,4 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 delete_option( 'hail_mail_connect_settings' );
 delete_option( 'hail_mail_connect_tokens' );
+delete_option( 'hail_mail_connect_org_slug' );

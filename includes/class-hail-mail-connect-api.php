@@ -21,17 +21,23 @@ class Hail_Mail_Connect_API {
     const TOKEN_URL     = 'https://hail.to/api/v1/oauth/access_token';
 
     /**
-     * Scopes requested at connect time.
-     *
-     * studio is gated by Hail to a whitelisted client_id (config('studio.client_id')).
-     * Until this plugin's client is whitelisted, Hail will reject the studio portion at
-     * authorise time — so we request it but rely on the CAPTURED granted_scopes to know
-     * what we truly hold, and gate studio-only features on has_scope('studio').
+     * Base scopes always requested at connect time:
      *   - content.read   : browse mail lists + subscribers
      *   - content.write  : self-service subscribe/unsubscribe, admin remove-from-list
-     *   - studio         : admin add-without-opt-in (consent bypass) — optional
      */
-    const REQUESTED_SCOPE = 'user.basic content.read content.write studio';
+    const BASE_SCOPE = 'user.basic content.read content.write';
+
+    /**
+     * The studio scope (admin add-without-opt-in, consent bypass) is OPT-IN.
+     *
+     * Hail rejects the ENTIRE authorize request with 401 "Invalid Client Id" if studio
+     * is requested by a client that isn't whitelisted in config('studio.client_id')
+     * (AuthCodeController::authorize). Hail's authorize SPA reads that 401 as a lost
+     * session and bounces to login — so requesting studio prematurely makes connection
+     * impossible. We therefore only append it when the admin has confirmed (via the
+     * `request_studio` setting) that their client is whitelisted.
+     */
+    const STUDIO_SCOPE = 'studio';
 
     public function __construct() {
         add_action( 'admin_init', array( $this, 'handle_oauth_callback' ) );
@@ -83,6 +89,19 @@ class Hail_Mail_Connect_API {
         return admin_url( 'admin.php?page=hail-mail-connect-settings' );
     }
 
+    /**
+     * The scope string to request. Always the base scopes; studio is appended only
+     * when the admin has flagged their client as studio-whitelisted (see STUDIO_SCOPE).
+     */
+    public function get_requested_scope() {
+        $settings = $this->get_settings();
+        $scope    = self::BASE_SCOPE;
+        if ( ! empty( $settings['request_studio'] ) ) {
+            $scope .= ' ' . self::STUDIO_SCOPE;
+        }
+        return $scope;
+    }
+
     public function get_authorize_url() {
         $settings = $this->get_settings();
         $state    = wp_create_nonce( 'hail_mail_connect_oauth' );
@@ -91,7 +110,7 @@ class Hail_Mail_Connect_API {
             'client_id'     => $settings['client_id'],
             'redirect_uri'  => urlencode( $this->get_callback_url() ),
             'response_type' => 'code',
-            'scope'         => self::REQUESTED_SCOPE,
+            'scope'         => $this->get_requested_scope(),
             'state'         => $state,
         ), self::AUTHORIZE_URL );
     }
@@ -192,7 +211,7 @@ class Hail_Mail_Connect_API {
             'expires_at'     => time() + intval( $body['expires_in'] ),
             // Capture what was actually granted. If Hail omits `scope` on success it
             // means the full request was granted, so fall back to the requested set.
-            'granted_scopes' => self::parse_scopes( $body['scope'] ?? self::REQUESTED_SCOPE ),
+            'granted_scopes' => self::parse_scopes( $body['scope'] ?? $this->get_requested_scope() ),
         );
 
         update_option( HAIL_MAIL_CONNECT_TOKENS_KEY, $tokens );
@@ -214,6 +233,7 @@ class Hail_Mail_Connect_API {
         }
 
         delete_option( HAIL_MAIL_CONNECT_TOKENS_KEY );
+        delete_option( 'hail_mail_connect_org_slug' );
         add_settings_error( HAIL_MAIL_CONNECT_SETTINGS_KEY, 'disconnected', __( 'Disconnected from Hail.', 'hail-mail-connect' ), 'info' );
 
         wp_safe_redirect( $this->get_callback_url() );
@@ -407,6 +427,84 @@ class Hail_Mail_Connect_API {
             $endpoint .= '?' . http_build_query( $params );
         }
         return $this->request( $endpoint );
+    }
+
+    /**
+     * Find a contact by exact email and return its record (including `lists`
+     * memberships), or null if not found. Returns WP_Error on API failure.
+     *
+     * Used by the self-service shortcode to resolve the logged-in user's contact id
+     * and current list memberships. Makes a live call per render — fine for a
+     * subscription-management page; cache per-user with a short TTL if it ever lands
+     * on a high-traffic template.
+     */
+    public function find_contact_by_email( $email ) {
+        $email = sanitize_email( $email );
+        if ( empty( $email ) ) {
+            return null;
+        }
+        $resp = $this->get_org_subscribers( array( 'search' => $email, 'limit' => 50 ) );
+        if ( is_wp_error( $resp ) ) {
+            return $resp;
+        }
+        $list = ( isset( $resp['data'] ) && is_array( $resp['data'] ) ) ? $resp['data'] : ( is_array( $resp ) ? $resp : array() );
+        foreach ( $list as $contact ) {
+            if ( isset( $contact['email'] ) && strtolower( $contact['email'] ) === strtolower( $email ) ) {
+                return $contact;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Resolve the organisation SLUG (e.g. "auckland-primary-principals-association")
+     * for the configured organisation ID. The Hail web app addresses orgs by slug,
+     * but we only store the ID — so look it up via the user's organisations list
+     * (covered by user.basic, no extra scope needed) and cache it, since it rarely
+     * changes. Returns '' if it can't be resolved.
+     */
+    public function get_organisation_slug() {
+        $org_id = $this->get_settings()['organisation_id'] ?? '';
+        if ( empty( $org_id ) ) {
+            return '';
+        }
+
+        $cache = get_option( 'hail_mail_connect_org_slug', array() );
+        if ( is_array( $cache ) && ( $cache['org_id'] ?? '' ) === $org_id && ! empty( $cache['slug'] ) ) {
+            return $cache['slug'];
+        }
+
+        $me = $this->request( 'me' );
+        if ( is_wp_error( $me ) ) {
+            return '';
+        }
+        $uid = $me['id'] ?? ( $me['data']['id'] ?? '' );
+        if ( empty( $uid ) ) {
+            return '';
+        }
+
+        $orgs = $this->request( 'users/' . rawurlencode( $uid ) . '/organisations' );
+        if ( is_wp_error( $orgs ) ) {
+            return '';
+        }
+        $list = ( isset( $orgs['data'] ) && is_array( $orgs['data'] ) ) ? $orgs['data'] : ( is_array( $orgs ) ? $orgs : array() );
+
+        foreach ( $list as $org ) {
+            if ( (string) ( $org['id'] ?? '' ) === (string) $org_id ) {
+                $slug = $org['slug'] ?? '';
+                if ( $slug ) {
+                    update_option( 'hail_mail_connect_org_slug', array( 'org_id' => $org_id, 'slug' => $slug ), false );
+                }
+                return $slug;
+            }
+        }
+        return '';
+    }
+
+    /** Deep link to this organisation's Hail Mail dashboard, or '' if slug unresolved. */
+    public function get_hail_mail_dashboard_url() {
+        $slug = $this->get_organisation_slug();
+        return $slug ? 'https://hail.to/app/' . $slug . '/mail' : '';
     }
 
     /* ------------------------------------------------------------------ *

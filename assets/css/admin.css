@@ -1,4 +1,231 @@
-/* Hail Mail Connect — admin styles */
-.hail-mail-connect-wrap code {
+/* Hail Mail Connect — admin styles
+ * Palette approximated from the Hail Mail web UI. Tweak the variables here to
+ * fine-tune against the exact brand values. Everything is scoped to .hmc so it
+ * never leaks into the rest of wp-admin.
+ */
+.hmc {
+	--hmc-green: #6cab3e;
+	--hmc-green-700: #5a9433;
+	--hmc-green-soft: #eef6e6;
+	--hmc-ink: #2f3e4d;       /* dark slate headings */
+	--hmc-muted: #5a6b7b;     /* column headers / secondary text */
+	--hmc-line: #e7eaed;
+	--hmc-amber: #b26b00;
+	--hmc-red: #b32d2e;
+}
+
+/* Headings */
+.hmc h1,
+.hmc h2 {
+	color: var(--hmc-ink);
+	font-weight: 600;
+}
+
+/* Header bar (icon + title) */
+.hmc .hmc-header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 4px 0 14px;
+	border-bottom: 1px solid var(--hmc-line);
+	margin-bottom: 18px;
+}
+.hmc .hmc-header svg {
+	width: 26px;
+	height: 26px;
+	color: var(--hmc-green);
+	flex: 0 0 auto;
+}
+.hmc .hmc-header h1 {
+	margin: 0;
+	font-size: 22px;
+}
+.hmc .hmc-header .hmc-back {
+	margin-left: auto;
+	font-size: 13px;
+}
+
+/* Card-style tables */
+.hmc .hmc-card {
+	background: #fff;
+	border: 1px solid var(--hmc-line);
+	border-radius: 10px;
+	overflow: hidden;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+	max-width: 1100px;
+}
+.hmc table.hmc-table {
+	border: 0;
+	border-collapse: collapse;
+	width: 100%;
+	background: transparent;
+}
+.hmc table.hmc-table th {
+	color: var(--hmc-muted);
 	font-size: 12px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: .03em;
+	border-bottom: 1px solid var(--hmc-line);
+	padding: 14px 18px;
+	text-align: left;
+	background: #fbfcfc;
+}
+.hmc table.hmc-table td {
+	padding: 16px 18px;
+	border-bottom: 1px solid var(--hmc-line);
+	vertical-align: middle;
+	color: var(--hmc-ink);
+}
+.hmc table.hmc-table tbody tr:last-child td {
+	border-bottom: 0;
+}
+.hmc table.hmc-table tbody tr:hover {
+	background: #fafcf8;
+}
+.hmc .hmc-listname {
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--hmc-ink);
+	text-decoration: none;
+}
+.hmc .hmc-listname:hover {
+	color: var(--hmc-green-700);
+}
+.hmc .hmc-sub {
+	display: block;
+	margin-top: 3px;
+	font-size: 12px;
+	color: var(--hmc-muted);
+}
+
+/* Green "N subs" count link */
+.hmc .hmc-count {
+	color: var(--hmc-green-700);
+	font-weight: 600;
+	text-decoration: none;
+}
+.hmc .hmc-count:hover {
+	text-decoration: underline;
+}
+
+/* Type tag (Hail / SMS / integration) */
+.hmc .hmc-tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: var(--hmc-green-soft);
+	color: var(--hmc-green-700);
+	font-size: 12px;
+	font-weight: 600;
+	padding: 3px 10px;
+	border-radius: 999px;
+}
+
+/* Status pills */
+.hmc .hmc-pill {
+	display: inline-block;
+	font-size: 11px;
+	font-weight: 600;
+	padding: 2px 9px;
+	border-radius: 999px;
+	background: #eef1f3;
+	color: var(--hmc-muted);
+}
+.hmc .hmc-pill.is-subscribed {
+	background: var(--hmc-green-soft);
+	color: var(--hmc-green-700);
+}
+.hmc .hmc-pill.is-unsubscribed,
+.hmc .hmc-pill.is-bounced,
+.hmc .hmc-pill.is-complained {
+	background: #fbeaea;
+	color: var(--hmc-red);
+}
+.hmc .hmc-pill.is-muted {
+	background: #fdf3e6;
+	color: var(--hmc-amber);
+}
+
+/* WP-match cell */
+.hmc .hmc-match .dashicons {
+	color: var(--hmc-green);
+	vertical-align: text-bottom;
+}
+.hmc .hmc-nomatch {
+	color: #9aa3ab;
+}
+.hmc .hmc-admin-flag {
+	color: var(--hmc-amber);
+	font-style: italic;
+	font-size: 12px;
+}
+
+/* Recolour primary buttons green to match Hail */
+.hmc.wrap .button-primary,
+.hmc .page-title-action {
+	background: var(--hmc-green);
+	border-color: var(--hmc-green-700);
+	color: #fff;
+	box-shadow: none;
+	text-shadow: none;
+}
+.hmc.wrap .button-primary:hover,
+.hmc .page-title-action:hover {
+	background: var(--hmc-green-700);
+	border-color: var(--hmc-green-700);
+	color: #fff;
+}
+
+/* Filter bar above tab tables */
+.hmc .hmc-filter {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0 0 16px;
+}
+.hmc .hmc-filter input[type="search"] {
+	min-width: 260px;
+}
+
+/* Pagination — aligned to the table card width (1100px), Next on the right edge */
+.hmc .hmc-pagination {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	max-width: 1100px;
+	margin-top: 14px;
+	color: var(--hmc-muted);
+	font-size: 13px;
+}
+.hmc .hmc-pagination__nav {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+/* Settings cards */
+.hmc .hmc-section {
+	background: #fff;
+	border: 1px solid var(--hmc-line);
+	border-radius: 10px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+	padding: 8px 22px 20px;
+	margin: 0 0 20px;
+	max-width: 760px;
+}
+.hmc .hmc-section > h2 {
+	margin: 16px 0 4px;
+	font-size: 16px;
+}
+.hmc .hmc-section .form-table {
+	margin-top: 8px;
+}
+
+/* Connection status line on settings */
+.hmc .hmc-scopes code {
+	background: #f4f6f7;
+	padding: 2px 6px;
+	border-radius: 4px;
 }

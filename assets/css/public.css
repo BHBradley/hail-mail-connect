@@ -1,0 +1,105 @@
+/* Hail Mail Connect — front-end self-service subscription form */
+.hmc-subscribe {
+	--hmc-green: #6cab3e;
+	--hmc-green-700: #5a9433;
+	--hmc-ink: #2f3e4d;
+	--hmc-line: #e1e5e8;
+	max-width: 520px;
+	border: 1px solid var(--hmc-line);
+	border-radius: 12px;
+	padding: 22px 24px;
+	background: #fff;
+}
+.hmc-subscribe__title {
+	margin: 0 0 4px;
+	color: var(--hmc-ink);
+	font-size: 18px;
+}
+.hmc-subscribe__intro {
+	margin: 0 0 16px;
+	color: #6b7884;
+	font-size: 13px;
+}
+.hmc-subscribe__lists {
+	list-style: none;
+	margin: 0 0 18px;
+	padding: 0;
+}
+.hmc-subscribe__item {
+	margin: 0;
+	border-bottom: 1px solid #f0f2f4;
+}
+.hmc-subscribe__item:last-child {
+	border-bottom: 0;
+}
+.hmc-subscribe__item label {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 11px 2px;
+	cursor: pointer;
+}
+.hmc-subscribe__item input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+	accent-color: var(--hmc-green);
+	flex: 0 0 auto;
+}
+.hmc-subscribe__name {
+	color: var(--hmc-ink);
+	font-size: 15px;
+}
+.hmc-subscribe__actions {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+}
+.hmc-subscribe__save {
+	background: var(--hmc-green);
+	color: #fff;
+	border: 0;
+	border-radius: 8px;
+	padding: 10px 20px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+}
+.hmc-subscribe__save:hover {
+	background: var(--hmc-green-700);
+}
+.hmc-subscribe__save:disabled {
+	opacity: .6;
+	cursor: default;
+}
+.hmc-subscribe__message {
+	font-size: 13px;
+}
+.hmc-subscribe__message.is-success {
+	color: var(--hmc-green-700);
+}
+.hmc-subscribe__message.is-error {
+	color: #b32d2e;
+}
+.hmc-subscribe--notice {
+	max-width: 520px;
+	padding: 14px 16px;
+	border: 1px solid var(--hmc-line, #e1e5e8);
+	border-radius: 10px;
+	background: #fafbfc;
+	color: #4b5563;
+}
+
+/* Logged-out login prompt wrapper (hosts the native WP login form or a wp-login link) */
+.hmc-subscribe--login .hmc-subscribe__intro {
+	margin-bottom: 14px;
+}
+.hmc-subscribe--login input[type="text"],
+.hmc-subscribe--login input[type="password"] {
+	width: 100%;
+	box-sizing: border-box;
+}
+.hmc-subscribe--login a.hmc-subscribe__save {
+	display: inline-block;
+	text-decoration: none;
+}
+
