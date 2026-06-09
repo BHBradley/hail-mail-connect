@@ -40,6 +40,10 @@ class Hail_Mail_Connect_Settings {
                 $clean[ $key ] = sanitize_text_field( $input[ $key ] );
             }
         }
+        // Opt-in studio scope. Only safe to enable once Hail has whitelisted this
+        // client_id — otherwise the authorize request is rejected with 401 and the
+        // connection can't complete.
+        $clean['request_studio'] = empty( $input['request_studio'] ) ? 0 : 1;
         return $clean;
     }
 
@@ -62,7 +66,7 @@ class Hail_Mail_Connect_Settings {
         $settings = $api->get_settings();
         $connected = $api->is_connected();
         ?>
-        <div class="wrap">
+        <div class="wrap hmc">
             <h1><?php esc_html_e( 'Hail Mail — Settings', 'hail-mail-connect' ); ?></h1>
             <?php settings_errors(); ?>
 
@@ -124,37 +128,58 @@ class Hail_Mail_Connect_Settings {
                         <th scope="row"><label for="hmc_org_id"><?php esc_html_e( 'Organisation ID', 'hail-mail-connect' ); ?></label></th>
                         <td><input type="text" id="hmc_org_id" name="<?php echo esc_attr( HAIL_MAIL_CONNECT_SETTINGS_KEY ); ?>[organisation_id]" value="<?php echo esc_attr( $settings['organisation_id'] ?? '' ); ?>" class="regular-text" /></td>
                     </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e( 'Studio scope', 'hail-mail-connect' ); ?></th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="<?php echo esc_attr( HAIL_MAIL_CONNECT_SETTINGS_KEY ); ?>[request_studio]" value="1" <?php checked( ! empty( $settings['request_studio'] ) ); ?> />
+                                <?php esc_html_e( 'Request the studio scope (admin add-without-opt-in)', 'hail-mail-connect' ); ?>
+                            </label>
+                            <p class="description" style="color:#b32d2e;">
+                                <?php esc_html_e( 'Leave OFF until Hail has whitelisted this Client ID for the studio scope. If enabled before then, Hail rejects the whole authorisation (HTTP 401) and the connect flow bounces to the login screen. You can connect now with this off, then enable it and reconnect once whitelisting is confirmed.', 'hail-mail-connect' ); ?>
+                            </p>
+                        </td>
+                    </tr>
                 </table>
                 <?php submit_button(); ?>
             </form>
+
+            <?php
+            $preview_client = $settings['client_id'] ?? '';
+            $preview_scope  = $api->get_requested_scope();
+            ?>
+            <div class="hmc-card" style="max-width:760px;margin-top:6px;padding:14px 16px;">
+                <p style="margin:0 0 6px;font-weight:600;color:var(--hmc-ink,#2f3e4d);"><?php esc_html_e( 'Authorisation request preview', 'hail-mail-connect' ); ?></p>
+                <p style="margin:0;font-size:13px;color:#50575e;">
+                    <?php esc_html_e( 'Client ID:', 'hail-mail-connect' ); ?>
+                    <code><?php echo esc_html( '' !== $preview_client ? $preview_client : __( '(not set)', 'hail-mail-connect' ) ); ?></code><br>
+                    <?php esc_html_e( 'Requested scope:', 'hail-mail-connect' ); ?>
+                    <code><?php echo esc_html( $preview_scope ); ?></code>
+                </p>
+                <p style="margin:8px 0 0;font-size:12px;color:#b32d2e;">
+                    <?php esc_html_e( 'For the studio scope to be granted, Hail’s STUDIO_CLIENT_ID must equal the Client ID above exactly (no extra spaces, same case). Send this exact value to the Hail team to confirm the match.', 'hail-mail-connect' ); ?>
+                </p>
+            </div>
+
+            <details class="hmc-troubleshoot" style="margin-top:18px;max-width:760px;">
+                <summary style="cursor:pointer;font-weight:600;color:var(--hmc-ink,#2f3e4d);"><?php esc_html_e( 'Studio scope troubleshooting', 'hail-mail-connect' ); ?></summary>
+                <div style="margin-top:10px;border-left:3px solid #e7eaed;padding:4px 0 4px 14px;color:#50575e;font-size:13px;">
+                    <p><strong><?php esc_html_e( 'Symptom:', 'hail-mail-connect' ); ?></strong>
+                        <?php esc_html_e( 'with the Studio scope enabled, clicking “Connect to Hail” briefly shows the authorise screen then bounces to the Hail login page — even when you are already logged in.', 'hail-mail-connect' ); ?></p>
+
+                    <p><strong><?php esc_html_e( 'Cause:', 'hail-mail-connect' ); ?></strong>
+                        <?php esc_html_e( 'Hail only allows the studio scope for ONE whitelisted OAuth client. If studio is requested by any other client, Hail returns HTTP 401 “Invalid Client Id”, and its login app reads that 401 as a lost session — so you land on the login screen.', 'hail-mail-connect' ); ?></p>
+
+                    <p><strong><?php esc_html_e( 'How to fix:', 'hail-mail-connect' ); ?></strong></p>
+                    <ul style="list-style:disc;margin:0 0 0 18px;">
+                        <li><?php esc_html_e( 'The Client ID above must EXACTLY match the value Hail set as STUDIO_CLIENT_ID — it is a single value, so only one app can hold studio.', 'hail-mail-connect' ); ?></li>
+                        <li><?php esc_html_e( 'Ask the Hail team to confirm they cleared the config cache after setting it (php artisan config:clear) and redeployed — a common reason the change does not take effect.', 'hail-mail-connect' ); ?></li>
+                        <li><?php esc_html_e( 'You can always connect with the Studio scope OFF: browsing, self-service subscribe/unsubscribe, and admin remove all work on content.read + content.write. Only “add a subscriber without opt-in” needs studio.', 'hail-mail-connect' ); ?></li>
+                    </ul>
+                </div>
+            </details>
         </div>
         <?php
     }
 
-    /**
-     * Mailing Lists browse — read-only. Stub for now; the next milestone renders the
-     * org's lists (GET organisations/{org}/mail/lists) with subscriber counts, each
-     * linking to ?page=hail-mail-connect&list_id={id} for the subscribers view.
-     */
-    public function render_lists_page() {
-        $api = Hail_Mail_Connect::instance()->api;
-        ?>
-        <div class="wrap">
-            <h1><?php esc_html_e( 'Hail Mail — Mailing Lists', 'hail-mail-connect' ); ?></h1>
-            <?php if ( ! $api->is_connected() ) : ?>
-                <div class="notice notice-warning"><p>
-                    <?php
-                    printf(
-                        /* translators: %s: settings page URL */
-                        wp_kses_post( __( 'Not connected to Hail. <a href="%s">Open Settings</a> to connect.', 'hail-mail-connect' ) ),
-                        esc_url( admin_url( 'admin.php?page=hail-mail-connect-settings' ) )
-                    );
-                    ?>
-                </p></div>
-            <?php else : ?>
-                <p><em><?php esc_html_e( 'Mailing list browsing is being built. Connection is live.', 'hail-mail-connect' ); ?></em></p>
-            <?php endif; ?>
-        </div>
-        <?php
-    }
 }

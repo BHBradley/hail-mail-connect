@@ -20,6 +20,8 @@ define( 'HAIL_MAIL_CONNECT_TOKENS_KEY', 'hail_mail_connect_tokens' );
 
 require_once HAIL_MAIL_CONNECT_PATH . 'includes/class-hail-mail-connect-api.php';
 require_once HAIL_MAIL_CONNECT_PATH . 'includes/class-hail-mail-connect-settings.php';
+require_once HAIL_MAIL_CONNECT_PATH . 'includes/class-hail-mail-connect-lists.php';
+require_once HAIL_MAIL_CONNECT_PATH . 'includes/class-hail-mail-connect-shortcodes.php';
 
 /**
  * Main plugin singleton. Mirrors Hail Connect's bootstrap so the two plugins share
@@ -36,6 +38,12 @@ class Hail_Mail_Connect {
     /** @var Hail_Mail_Connect_Settings */
     public $settings;
 
+    /** @var Hail_Mail_Connect_Lists */
+    public $lists;
+
+    /** @var Hail_Mail_Connect_Shortcodes */
+    public $shortcodes;
+
     public static function instance() {
         if ( null === self::$instance ) {
             self::$instance = new self();
@@ -44,8 +52,10 @@ class Hail_Mail_Connect {
     }
 
     private function __construct() {
-        $this->api      = new Hail_Mail_Connect_API();
-        $this->settings = new Hail_Mail_Connect_Settings();
+        $this->api        = new Hail_Mail_Connect_API();
+        $this->settings   = new Hail_Mail_Connect_Settings();
+        $this->lists      = new Hail_Mail_Connect_Lists();
+        $this->shortcodes = new Hail_Mail_Connect_Shortcodes();
 
         add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
@@ -73,7 +83,7 @@ class Hail_Mail_Connect {
             __( 'Hail Mail', 'hail-mail-connect' ),
             'manage_options',
             'hail-mail-connect',
-            array( $this->settings, 'render_lists_page' ),
+            array( $this->lists, 'render_page' ),
             $icon,
             31
         );
@@ -84,7 +94,7 @@ class Hail_Mail_Connect {
             __( 'Mailing Lists', 'hail-mail-connect' ),
             'manage_options',
             'hail-mail-connect',
-            array( $this->settings, 'render_lists_page' )
+            array( $this->lists, 'render_page' )
         );
 
         add_submenu_page(
