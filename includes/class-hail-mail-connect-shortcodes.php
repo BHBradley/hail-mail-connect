@@ -73,6 +73,22 @@ class Hail_Mail_Connect_Shortcodes {
         $contact = $api->find_contact_by_email( $user->user_email );
         $current = is_array( $contact ) ? $this->current_subscribed_list_ids( $contact ) : array();
 
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            $dbg = array();
+            foreach ( (array) ( is_array( $contact ) ? ( $contact['lists'] ?? array() ) : array() ) as $l ) {
+                $u     = $l['pivot']['unsubscribed_date'] ?? ( $l['unsubscribed_date'] ?? null );
+                $dbg[] = ( $l['id'] ?? '?' ) . ':' . ( empty( $u ) ? 'sub' : 'unsub' );
+            }
+            $offered_ids = array();
+            foreach ( $offered as $o ) {
+                $offered_ids[] = $o['id'] ?? '?';
+            }
+            error_log( 'HMC form read — contact=' . ( is_array( $contact ) ? ( $contact['id'] ?? '?' ) : 'NONE' )
+                . ' offered=[' . implode( ',', $offered_ids ) . ']'
+                . ' contactLists=[' . implode( ',', $dbg ) . ']'
+                . ' current=[' . implode( ',', $current ) . ']' );
+        }
+
         wp_enqueue_style( 'hail-mail-connect-public' );
         wp_enqueue_script( 'hail-mail-connect-public' );
 
@@ -152,45 +168,54 @@ class Hail_Mail_Connect_Shortcodes {
         $to_remove  = array_diff( $current, $desired );
 
         $use_studio = $api->has_scope( 'studio' );
+        $debug      = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
-        foreach ( $to_add as $list_id ) {
-            if ( $contact_id ) {
-                // EXISTING contact (always the case on re-subscribe): reactivate via the
-                // content.write add-existing endpoint, which upserts the pivot with
-                // unsubscribed_date = null AND removed_at = null — a full reactivation.
-                // We must NOT use studio here: its addMailList only clears removed_at and
-                // leaves unsubscribed_date set, so a previously-unsubscribed member would
-                // stay "Unsubscribed" and the checkbox would never stick. No opt-in email
-                // is sent for an existing contact (no createContact / VerifyEmailJob).
-                $r = $api->add_existing_subscribers_to_list( $list_id, array( $contact_id ) );
-                if ( is_wp_error( $r ) ) {
-                    $errors[] = $this->log_op_error( 'add ' . $list_id, $r );
-                }
-            } elseif ( $use_studio ) {
-                // BRAND-NEW contact: studio bypasses the opt-in / verification flow.
-                $r = $api->studio_add_subscribers( $list_id, array( array(
+        // Step 1: make sure the contact exists. If we couldn't resolve one (brand-new
+        // email, OR a contact that was deleted in Hail so it no longer shows in search),
+        // create/restore it — via studio when available (no verification email), else the
+        // content.write create. Then RE-RESOLVE its id: studio may restore a previously
+        // deleted contact carrying a stale, unsubscribed membership.
+        if ( '' === $contact_id && ! empty( $to_add ) ) {
+            $seed_list = (string) reset( $to_add );
+            if ( $use_studio ) {
+                $r = $api->studio_add_subscribers( $seed_list, array( array(
                     'email'      => $email,
                     'first_name' => $user->first_name,
                     'last_name'  => $user->last_name,
                 ) ) );
+                if ( $debug ) {
+                    error_log( 'HMC write — studio-create resp=' . ( is_wp_error( $r ) ? $r->get_error_message() : wp_json_encode( $r ) ) );
+                }
                 if ( is_wp_error( $r ) ) {
-                    $errors[] = $this->log_op_error( 'studio-add ' . $list_id, $r );
-                } else {
-                    // studio returns 200 with per-contact results even on failure.
-                    foreach ( (array) ( $r['results'] ?? array() ) as $res ) {
-                        if ( ( $res['status'] ?? '' ) !== 'added' ) {
-                            $detail = 'studio-add ' . $list_id . ': ' . ( $res['error'] ?? 'failed' );
-                            error_log( 'Hail Mail Connect subscribe error — ' . $detail );
-                            $errors[] = $detail;
-                        }
-                    }
+                    $errors[] = $this->log_op_error( 'studio-create', $r );
                 }
             } else {
-                // Brand-new contact, no studio: fall back to the verifying create endpoint.
-                $r = $api->create_subscriber( $email, $user->first_name, $user->last_name, array( $list_id ), true );
+                $r = $api->create_subscriber( $email, $user->first_name, $user->last_name, array( $seed_list ), true );
                 if ( is_wp_error( $r ) ) {
-                    $errors[] = $this->log_op_error( 'create ' . $list_id, $r );
+                    $errors[] = $this->log_op_error( 'create', $r );
                 }
+            }
+            $resolved   = $api->find_contact_by_email( $email );
+            $contact_id = is_array( $resolved ) ? ( $resolved['id'] ?? '' ) : '';
+            if ( $debug ) {
+                error_log( 'HMC write — re-resolved contact_id=' . ( '' !== $contact_id ? $contact_id : 'NONE' ) );
+            }
+        }
+
+        // Step 2: force every desired list ACTIVE via content.write add-existing, which
+        // upserts the pivot with unsubscribed_date = null AND removed_at = null. (studio's
+        // addMailList only clears removed_at — that's why re-subscribes stayed unsubscribed.)
+        foreach ( $to_add as $list_id ) {
+            if ( '' === $contact_id ) {
+                $errors[] = 'add ' . $list_id . ': could not resolve contact';
+                continue;
+            }
+            $r = $api->add_existing_subscribers_to_list( $list_id, array( $contact_id ) );
+            if ( $debug ) {
+                error_log( 'HMC write — add-existing ' . $list_id . ' resp=' . ( is_wp_error( $r ) ? $r->get_error_message() : wp_json_encode( $r ) ) );
+            }
+            if ( is_wp_error( $r ) ) {
+                $errors[] = $this->log_op_error( 'add ' . $list_id, $r );
             }
         }
 
