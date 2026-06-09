@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Hail Mail Connect
  * Description: Connects WordPress with the Hail CMS platform to browse mailing lists, match subscribers against WP users, and let logged-in users self-manage their subscriptions.
- * Version: 0.1.3
+ * Version: 0.1.4
  * Author: Hail
  * Author URI: https://get.hail.to/
  * Text Domain: hail-mail-connect
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'HAIL_MAIL_CONNECT_VERSION', '0.1.3' );
+define( 'HAIL_MAIL_CONNECT_VERSION', '0.1.4' );
 define( 'HAIL_MAIL_CONNECT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'HAIL_MAIL_CONNECT_URL', plugin_dir_url( __FILE__ ) );
 define( 'HAIL_MAIL_CONNECT_SETTINGS_KEY', 'hail_mail_connect_settings' );
