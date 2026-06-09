@@ -93,8 +93,8 @@ class Hail_Mail_Connect_Settings {
                     </div>
                 <?php endif; ?>
                 <p>
-                    <button type="button" class="button" id="hail-mail-connect-test"><?php esc_html_e( 'Test Connection', 'hail-mail-connect' ); ?></button>
-                    <a href="<?php echo esc_url( $disconnect_url ); ?>" class="button button-secondary"><?php esc_html_e( 'Disconnect', 'hail-mail-connect' ); ?></a>
+                    <button type="button" class="button button-primary" id="hail-mail-connect-test"><?php esc_html_e( 'Test Connection', 'hail-mail-connect' ); ?></button>
+                    <a href="<?php echo esc_url( $disconnect_url ); ?>" class="button button-primary"><?php esc_html_e( 'Disconnect', 'hail-mail-connect' ); ?></a>
                     <span id="hail-mail-connect-test-result" style="margin-left:8px;"></span>
                 </p>
             <?php else : ?>
@@ -109,12 +109,19 @@ class Hail_Mail_Connect_Settings {
                 <?php endif; ?>
             <?php endif; ?>
 
-            <h2><?php esc_html_e( 'API Credentials', 'hail-mail-connect' ); ?></h2>
-            <p class="description"><?php esc_html_e( 'Use the dedicated studio-whitelisted Hail application (separate from Hail Connect). Callback URL:', 'hail-mail-connect' ); ?>
-                <code><?php echo esc_html( $api->get_callback_url() ); ?></code>
-            </p>
+            <div class="hmc-card" style="max-width:1024px;margin:0 0 20px;padding:14px 18px;">
+                <p style="margin:0 0 6px;font-weight:600;color:var(--hmc-ink,#2f3e4d);"><?php esc_html_e( 'Studio scope', 'hail-mail-connect' ); ?></p>
+                <p style="margin:0;font-size:13px;color:#50575e;"><?php esc_html_e( 'Leave the “Studio scope” option below OFF until Hail has whitelisted this Client ID for it. If you enable it beforehand, Hail rejects the entire authorisation (HTTP 401) and the connect flow bounces back to the login screen. Connect now with it off, then enable it and reconnect once whitelisting is confirmed.', 'hail-mail-connect' ); ?></p>
+            </div>
+
             <form method="post" action="options.php">
                 <?php settings_fields( 'hail_mail_connect_settings_group' ); ?>
+
+                <div class="hmc-section">
+                <h2><?php esc_html_e( 'API Credentials', 'hail-mail-connect' ); ?></h2>
+                <p class="description"><?php esc_html_e( 'Use the dedicated studio-whitelisted Hail application (separate from Hail Connect). Callback URL:', 'hail-mail-connect' ); ?>
+                    <code><?php echo esc_html( $api->get_callback_url() ); ?></code>
+                </p>
                 <table class="form-table" role="presentation">
                     <tr>
                         <th scope="row"><label for="hmc_client_id"><?php esc_html_e( 'Client ID', 'hail-mail-connect' ); ?></label></th>
@@ -135,13 +142,12 @@ class Hail_Mail_Connect_Settings {
                                 <input type="checkbox" name="<?php echo esc_attr( HAIL_MAIL_CONNECT_SETTINGS_KEY ); ?>[request_studio]" value="1" <?php checked( ! empty( $settings['request_studio'] ) ); ?> />
                                 <?php esc_html_e( 'Request the studio scope (admin add-without-opt-in)', 'hail-mail-connect' ); ?>
                             </label>
-                            <p class="description" style="color:#b32d2e;">
-                                <?php esc_html_e( 'Leave OFF until Hail has whitelisted this Client ID for the studio scope. If enabled before then, Hail rejects the whole authorisation (HTTP 401) and the connect flow bounces to the login screen. You can connect now with this off, then enable it and reconnect once whitelisting is confirmed.', 'hail-mail-connect' ); ?>
-                            </p>
                         </td>
                     </tr>
                 </table>
+                </div>
 
+                <div class="hmc-section">
                 <h2><?php esc_html_e( 'Updates', 'hail-mail-connect' ); ?></h2>
                 <p class="description"><?php esc_html_e( 'Enable one-click updates from the plugin\'s GitHub releases. The access token is only needed for a private repository (fine-grained PAT, Contents: Read-only).', 'hail-mail-connect' ); ?></p>
                 <table class="form-table" role="presentation">
@@ -157,6 +163,8 @@ class Hail_Mail_Connect_Settings {
                         <td><input type="password" id="hmc_github_token" name="<?php echo esc_attr( HAIL_MAIL_CONNECT_SETTINGS_KEY ); ?>[github_token]" value="<?php echo esc_attr( $settings['github_token'] ?? '' ); ?>" class="regular-text" autocomplete="off" /></td>
                     </tr>
                 </table>
+                </div>
+
                 <?php submit_button(); ?>
             </form>
 

@@ -211,19 +211,26 @@ class Hail_Mail_Connect_Lists {
             return;
         }
 
-        $paged = isset( $_GET['paged'] ) ? max( 1, (int) $_GET['paged'] ) : 1;
+        $paged  = isset( $_GET['paged'] ) ? max( 1, (int) $_GET['paged'] ) : 1;
+        $search = isset( $_GET['us'] ) ? sanitize_text_field( wp_unslash( $_GET['us'] ) ) : '';
 
         // Non-admin WP users (role-based exclusion — efficient and keeps the count
         // accurate; custom admin roles / multisite super admins are a future seam).
-        $query = new WP_User_Query( array(
-            'number'      => self::PER_PAGE,
-            'paged'       => $paged,
-            'orderby'     => 'display_name',
-            'order'       => 'ASC',
+        $args = array(
+            'number'       => self::PER_PAGE,
+            'paged'        => $paged,
+            'orderby'      => 'display_name',
+            'order'        => 'ASC',
             'role__not_in' => array( 'administrator' ),
-            'count_total' => true,
-            'fields'      => array( 'ID', 'user_email', 'display_name' ),
-        ) );
+            'count_total'  => true,
+            'fields'       => array( 'ID', 'user_email', 'display_name' ),
+        );
+        if ( '' !== $search ) {
+            // Match username, email, display name or nicename.
+            $args['search']         = '*' . $search . '*';
+            $args['search_columns'] = array( 'user_login', 'user_email', 'display_name', 'user_nicename' );
+        }
+        $query = new WP_User_Query( $args );
         $users = $query->get_results();
         $total = (int) $query->get_total();
 
@@ -235,8 +242,11 @@ class Hail_Mail_Connect_Lists {
                 . '</p></div>';
         }
 
+        // Filter bar (by username or email), above the table.
+        $this->render_filter_bar( $list_id, 'wp', 'us', $search, __( 'Search email or username…', 'hail-mail-connect' ) );
+
         if ( empty( $users ) ) {
-            echo '<p><em>' . esc_html__( 'No registered non-admin users found.', 'hail-mail-connect' ) . '</em></p>';
+            echo '<p><em>' . esc_html__( 'No matching users found.', 'hail-mail-connect' ) . '</em></p>';
             return;
         }
 
@@ -246,15 +256,17 @@ class Hail_Mail_Connect_Lists {
             <input type="hidden" name="action" value="hail_mail_save_members" />
             <input type="hidden" name="list_id" value="<?php echo esc_attr( $list_id ); ?>" />
             <input type="hidden" name="paged" value="<?php echo esc_attr( $paged ); ?>" />
+            <input type="hidden" name="us" value="<?php echo esc_attr( $search ); ?>" />
             <?php wp_nonce_field( 'hail_mail_save_members_' . $list_id ); ?>
 
             <div class="hmc-card">
             <table class="hmc-table">
                 <thead>
                     <tr>
-                        <th style="width:70px;"><?php esc_html_e( 'In list', 'hail-mail-connect' ); ?></th>
                         <th><?php esc_html_e( 'WP user', 'hail-mail-connect' ); ?></th>
                         <th><?php esc_html_e( 'Email', 'hail-mail-connect' ); ?></th>
+                        <th style="width:130px;"><?php esc_html_e( 'Status', 'hail-mail-connect' ); ?></th>
+                        <th style="width:90px;"><?php esc_html_e( 'In list', 'hail-mail-connect' ); ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -266,16 +278,28 @@ class Hail_Mail_Connect_Lists {
                     // Disable only when we cannot perform the implied action: adding
                     // (an unchecked box) needs studio; removing is always allowed.
                     $disabled = ( ! $subscribed && ! $has_studio );
+                    // Membership status of this WP user against the current list.
+                    if ( $subscribed ) {
+                        $status_label = __( 'Subscribed', 'hail-mail-connect' );
+                        $status_class = 'is-subscribed';
+                    } elseif ( $entry ) {
+                        $status_label = __( 'Unsubscribed', 'hail-mail-connect' );
+                        $status_class = 'is-unsubscribed';
+                    } else {
+                        $status_label = __( 'Not on list', 'hail-mail-connect' );
+                        $status_class = '';
+                    }
                     ?>
                     <tr>
-                        <td>
-                            <input type="checkbox" name="members[]" value="<?php echo esc_attr( $email ); ?>"
-                                <?php checked( $subscribed ); ?> <?php disabled( $disabled ); ?> />
-                        </td>
                         <td>
                             <a href="<?php echo esc_url( get_edit_user_link( $u->ID ) ); ?>"><?php echo esc_html( $u->display_name ); ?></a>
                         </td>
                         <td><?php echo esc_html( $u->user_email ); ?></td>
+                        <td><span class="hmc-pill <?php echo esc_attr( $status_class ); ?>"><?php echo esc_html( $status_label ); ?></span></td>
+                        <td>
+                            <input type="checkbox" name="members[]" value="<?php echo esc_attr( $email ); ?>"
+                                <?php checked( $subscribed ); ?> <?php disabled( $disabled ); ?> />
+                        </td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>
@@ -289,7 +313,7 @@ class Hail_Mail_Connect_Lists {
             </p>
         </form>
         <?php
-        $this->render_pagination( $total, $paged, array( 'list_id' => $list_id, 'tab' => 'wp' ), __( 'user', 'hail-mail-connect' ), __( 'users', 'hail-mail-connect' ) );
+        $this->render_pagination( $total, $paged, array_filter( array( 'list_id' => $list_id, 'tab' => 'wp', 'us' => $search ) ), __( 'user', 'hail-mail-connect' ), __( 'users', 'hail-mail-connect' ) );
     }
 
     /* ------------------------------------------------------------------ *
@@ -304,6 +328,7 @@ class Hail_Mail_Connect_Lists {
         check_admin_referer( 'hail_mail_save_members_' . $list_id );
 
         $paged      = isset( $_POST['paged'] ) ? max( 1, (int) $_POST['paged'] ) : 1;
+        $search     = isset( $_POST['us'] ) ? sanitize_text_field( wp_unslash( $_POST['us'] ) ) : '';
         $candidates = isset( $_POST['candidates'] ) ? array_filter( array_map( 'strtolower', array_map( 'sanitize_text_field', explode( ',', wp_unslash( $_POST['candidates'] ) ) ) ) ) : array();
         $checked    = isset( $_POST['members'] ) ? array_map( 'strtolower', array_map( 'sanitize_email', (array) wp_unslash( $_POST['members'] ) ) ) : array();
 
@@ -349,19 +374,20 @@ class Hail_Mail_Connect_Lists {
             }
         }
 
-        $redirect = add_query_arg(
-            array(
-                'page'        => 'hail-mail-connect',
-                'list_id'     => $list_id,
-                'tab'         => 'wp',
-                'paged'       => $paged,
-                'hmc_added'   => $added,
-                'hmc_removed' => $removed,
-                'hmc_failed'  => $failed,
-                'hmc_blocked' => $blocked,
-            ),
-            admin_url( 'admin.php' )
+        $query = array(
+            'page'        => 'hail-mail-connect',
+            'list_id'     => $list_id,
+            'tab'         => 'wp',
+            'paged'       => $paged,
+            'hmc_added'   => $added,
+            'hmc_removed' => $removed,
+            'hmc_failed'  => $failed,
+            'hmc_blocked' => $blocked,
         );
+        if ( '' !== $search ) {
+            $query['us'] = $search; // keep the user on their filtered view
+        }
+        $redirect = add_query_arg( $query, admin_url( 'admin.php' ) );
         wp_safe_redirect( $redirect );
         exit;
     }
@@ -439,18 +465,8 @@ class Hail_Mail_Connect_Lists {
         $search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
         $offset = ( $paged - 1 ) * self::PER_PAGE;
 
-        // Search box (preserves list_id + tab).
-        ?>
-        <form method="get" style="margin:0 0 12px;">
-            <input type="hidden" name="page" value="hail-mail-connect" />
-            <input type="hidden" name="list_id" value="<?php echo esc_attr( $list_id ); ?>" />
-            <input type="hidden" name="tab" value="subs" />
-            <p class="search-box">
-                <input type="search" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'Search email…', 'hail-mail-connect' ); ?>" />
-                <?php submit_button( __( 'Search', 'hail-mail-connect' ), '', '', false ); ?>
-            </p>
-        </form>
-        <?php
+        // Filter bar (by email), above the table.
+        $this->render_filter_bar( $list_id, 'subs', 's', $search, __( 'Search email…', 'hail-mail-connect' ) );
 
         $params = array( 'limit' => self::PER_PAGE, 'offset' => $offset );
         if ( '' !== $search ) {
@@ -662,6 +678,35 @@ class Hail_Mail_Connect_Lists {
         return __( 'Subscribed', 'hail-mail-connect' );
     }
 
+    /**
+     * Left-aligned filter bar above a tab's table. Shows a Reset link only when a
+     * filter value is present in the params.
+     *
+     * @param string $list_id
+     * @param string $tab          'wp' | 'subs'
+     * @param string $param        query param name ('us' | 's')
+     * @param string $value        current filter value
+     * @param string $placeholder
+     */
+    private function render_filter_bar( $list_id, $tab, $param, $value, $placeholder ) {
+        $reset_url = add_query_arg(
+            array( 'page' => 'hail-mail-connect', 'list_id' => $list_id, 'tab' => $tab ),
+            admin_url( 'admin.php' )
+        );
+        ?>
+        <form method="get" class="hmc-filter">
+            <input type="hidden" name="page" value="hail-mail-connect" />
+            <input type="hidden" name="list_id" value="<?php echo esc_attr( $list_id ); ?>" />
+            <input type="hidden" name="tab" value="<?php echo esc_attr( $tab ); ?>" />
+            <input type="search" name="<?php echo esc_attr( $param ); ?>" value="<?php echo esc_attr( $value ); ?>" placeholder="<?php echo esc_attr( $placeholder ); ?>" />
+            <?php submit_button( __( 'Filter', 'hail-mail-connect' ), 'primary', '', false ); ?>
+            <?php if ( '' !== $value ) : ?>
+                <a href="<?php echo esc_url( $reset_url ); ?>" class="button button-primary"><?php esc_html_e( 'Reset', 'hail-mail-connect' ); ?></a>
+            <?php endif; ?>
+        </form>
+        <?php
+    }
+
     private function render_pagination( $total, $paged, $query_args, $noun_single, $noun_plural ) {
         $total_pages = (int) ceil( $total / self::PER_PAGE );
         if ( $total_pages <= 1 ) {
@@ -672,17 +717,18 @@ class Hail_Mail_Connect_Lists {
             admin_url( 'admin.php' )
         );
 
-        echo '<div class="tablenav"><div class="tablenav-pages">';
-        echo '<span class="displaying-num">' . esc_html( sprintf( '%s %s', number_format_i18n( $total ), ( 1 === $total ? $noun_single : $noun_plural ) ) ) . '</span> ';
-
+        echo '<div class="hmc-pagination">';
+        echo '<span class="displaying-num">' . esc_html( sprintf( '%s %s', number_format_i18n( $total ), ( 1 === $total ? $noun_single : $noun_plural ) ) ) . '</span>';
+        echo '<span class="hmc-pagination__nav">';
         if ( $paged > 1 ) {
-            echo '<a class="button" href="' . esc_url( add_query_arg( 'paged', $paged - 1, $base ) ) . '">‹ ' . esc_html__( 'Prev', 'hail-mail-connect' ) . '</a> ';
+            echo '<a class="button button-primary" href="' . esc_url( add_query_arg( 'paged', $paged - 1, $base ) ) . '">‹ ' . esc_html__( 'Previous', 'hail-mail-connect' ) . '</a>';
         }
-        echo '<span class="paging-input" style="margin:0 6px;">' . esc_html( sprintf( __( 'Page %1$d of %2$d', 'hail-mail-connect' ), $paged, $total_pages ) ) . '</span>';
+        echo '<span class="paging-input">' . esc_html( sprintf( __( 'Page %1$d of %2$d', 'hail-mail-connect' ), $paged, $total_pages ) ) . '</span>';
         if ( $paged < $total_pages ) {
-            echo ' <a class="button" href="' . esc_url( add_query_arg( 'paged', $paged + 1, $base ) ) . '">' . esc_html__( 'Next', 'hail-mail-connect' ) . ' ›</a>';
+            echo '<a class="button button-primary" href="' . esc_url( add_query_arg( 'paged', $paged + 1, $base ) ) . '">' . esc_html__( 'Next', 'hail-mail-connect' ) . ' ›</a>';
         }
-        echo '</div></div>';
+        echo '</span>';
+        echo '</div>';
     }
 
     /** Admins see the technical detail; render an inline error block. */
