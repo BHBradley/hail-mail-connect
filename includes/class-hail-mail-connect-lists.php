@@ -348,16 +348,34 @@ class Hail_Mail_Connect_Lists {
                 $want  = in_array( $email, $checked, true );
 
                 if ( $want && ! $is ) {
-                    if ( ! $has_studio ) {
-                        $blocked++;
+                    // Resolve a contact id: from the list index, else an org search, else
+                    // create/restore (studio = no verification). studio alone can't clear
+                    // unsubscribed_date, so we always finalise with add-existing below.
+                    $cid = ( $entry && ! empty( $entry['id'] ) ) ? $entry['id'] : '';
+                    if ( '' === $cid ) {
+                        $found = $api->find_contact_by_email( $email );
+                        $cid   = is_array( $found ) ? ( $found['id'] ?? '' ) : '';
+                    }
+                    if ( '' === $cid ) {
+                        if ( ! $has_studio ) {
+                            $blocked++;
+                            continue;
+                        }
+                        $wp_user = get_user_by( 'email', $email );
+                        $api->studio_add_subscribers( $list_id, array( array(
+                            'email'      => $email,
+                            'first_name' => $wp_user ? $wp_user->first_name : '',
+                            'last_name'  => $wp_user ? $wp_user->last_name : '',
+                        ) ) );
+                        $found = $api->find_contact_by_email( $email );
+                        $cid   = is_array( $found ) ? ( $found['id'] ?? '' ) : '';
+                    }
+                    if ( '' === $cid ) {
+                        $failed++;
                         continue;
                     }
-                    $wp_user = get_user_by( 'email', $email );
-                    $r = $api->studio_add_subscribers( $list_id, array( array(
-                        'email'      => $email,
-                        'first_name' => $wp_user ? $wp_user->first_name : '',
-                        'last_name'  => $wp_user ? $wp_user->last_name : '',
-                    ) ) );
+                    // Force the membership active (clears unsubscribed_date + removed_at).
+                    $r = $api->add_existing_subscribers_to_list( $list_id, array( $cid ) );
                     if ( is_wp_error( $r ) ) {
                         $failed++;
                     } else {

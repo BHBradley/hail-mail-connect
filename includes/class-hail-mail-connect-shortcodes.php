@@ -151,42 +151,45 @@ class Hail_Mail_Connect_Shortcodes {
         $to_add     = array_diff( $desired, $current );
         $to_remove  = array_diff( $current, $desired );
 
-        // The whole point of this plugin: add subscribers WITHOUT the verification /
-        // double-opt-in flow. The studio endpoint does that. The content.write create
-        // path (createInOrganisation) dispatches Hail's VerifyEmailJob, leaving the
-        // contact pending — so only use it as a fallback when studio isn't granted.
         $use_studio = $api->has_scope( 'studio' );
 
-        foreach ( $to_add as $list_id ) {
+        // Step 1: make sure the contact exists. If we couldn't resolve one (brand-new
+        // email, OR a contact that was deleted in Hail so it no longer shows in search),
+        // create/restore it — via studio when available (no verification email), else the
+        // content.write create. Then RE-RESOLVE its id: studio may restore a previously
+        // deleted contact carrying a stale, unsubscribed membership.
+        if ( '' === $contact_id && ! empty( $to_add ) ) {
+            $seed_list = (string) reset( $to_add );
             if ( $use_studio ) {
-                $r = $api->studio_add_subscribers( $list_id, array( array(
+                $r = $api->studio_add_subscribers( $seed_list, array( array(
                     'email'      => $email,
                     'first_name' => $user->first_name,
                     'last_name'  => $user->last_name,
                 ) ) );
                 if ( is_wp_error( $r ) ) {
-                    $errors[] = $this->log_op_error( 'studio-add ' . $list_id, $r );
-                } else {
-                    // studio returns 200 with per-contact results even on failure.
-                    foreach ( (array) ( $r['results'] ?? array() ) as $res ) {
-                        if ( ( $res['status'] ?? '' ) !== 'added' ) {
-                            $detail = 'studio-add ' . $list_id . ': ' . ( $res['error'] ?? 'failed' );
-                            error_log( 'Hail Mail Connect subscribe error — ' . $detail );
-                            $errors[] = $detail;
-                        }
-                    }
-                }
-            } elseif ( $contact_id ) {
-                $r = $api->add_existing_subscribers_to_list( $list_id, array( $contact_id ) );
-                if ( is_wp_error( $r ) ) {
-                    $errors[] = $this->log_op_error( 'add ' . $list_id, $r );
+                    $errors[] = $this->log_op_error( 'studio-create', $r );
                 }
             } else {
-                // No studio: fall back to the verifying create endpoint (one list each).
-                $r = $api->create_subscriber( $email, $user->first_name, $user->last_name, array( $list_id ), true );
+                $r = $api->create_subscriber( $email, $user->first_name, $user->last_name, array( $seed_list ), true );
                 if ( is_wp_error( $r ) ) {
-                    $errors[] = $this->log_op_error( 'create ' . $list_id, $r );
+                    $errors[] = $this->log_op_error( 'create', $r );
                 }
+            }
+            $resolved   = $api->find_contact_by_email( $email );
+            $contact_id = is_array( $resolved ) ? ( $resolved['id'] ?? '' ) : '';
+        }
+
+        // Step 2: force every desired list ACTIVE via content.write add-existing, which
+        // upserts the pivot with unsubscribed_date = null AND removed_at = null. (studio's
+        // addMailList only clears removed_at — that's why re-subscribes stayed unsubscribed.)
+        foreach ( $to_add as $list_id ) {
+            if ( '' === $contact_id ) {
+                $errors[] = 'add ' . $list_id . ': could not resolve contact';
+                continue;
+            }
+            $r = $api->add_existing_subscribers_to_list( $list_id, array( $contact_id ) );
+            if ( is_wp_error( $r ) ) {
+                $errors[] = $this->log_op_error( 'add ' . $list_id, $r );
             }
         }
 

@@ -26,6 +26,13 @@ Upload `hail-mail-connect.zip` (Plugins → Add New → Upload Plugin) and verif
 - [ ] If repo is private: add a fine-grained PAT (Contents: Read-only) under Settings → Updates for the self-updater.
 - [ ] Rotate the Hail token/cookie that was exposed during debugging.
 
+## Hail-side — report to Patrick
+- [ ] **Studio re-add doesn't reactivate an unsubscribed member.** `EloquentMailContact::addMailList` (line 278) only clears `removed_at`, not `unsubscribed_date`, so re-adding a previously-unsubscribed contact via the studio endpoint leaves them "Unsubscribed". (content.write `addExistingSubscribers` clears both — upsert with `unsubscribed_date=null, removed_at=null`.) Studio should do the same, or expose a reactivate path.
+  - **Plugin workaround applied:** existing contacts are re-subscribed via content.write `add_existing_subscribers_to_list` (clears both flags, no opt-in email); studio is used only for brand-new contacts.
+  - **Compliance note:** this silently reactivates an opted-out contact. Fine for self-service (the member's own click = consent); for the admin tab, consider whether to respect Hail's "resubscribe request" flow instead.
+- [ ] Cross-org verification email + global address bounce/verification state (see earlier notes): scope verification/sender to the requesting org; decide per-org vs global suppression.
+- [ ] `unverified` status on studio adds: is the `mail_jobs` queue running; should `gave_consent` imports skip the deliverability gate; are unverified contacts excluded from sends?
+
 ## Shortcode `[hail_mail_subscribe]`
 - [x] Members-only: render nothing for unauthenticated visitors (login form/option removed).
 - [ ] Better default heading than "Manage your email subscriptions". (Note: `title="..."` already overrides it; consider also accepting a `heading="..."` alias since it's the more intuitive name.)
