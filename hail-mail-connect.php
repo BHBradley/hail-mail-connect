@@ -22,6 +22,7 @@ require_once HAIL_MAIL_CONNECT_PATH . 'includes/class-hail-mail-connect-api.php'
 require_once HAIL_MAIL_CONNECT_PATH . 'includes/class-hail-mail-connect-settings.php';
 require_once HAIL_MAIL_CONNECT_PATH . 'includes/class-hail-mail-connect-lists.php';
 require_once HAIL_MAIL_CONNECT_PATH . 'includes/class-hail-mail-connect-shortcodes.php';
+require_once HAIL_MAIL_CONNECT_PATH . 'includes/class-hail-mail-connect-updater.php';
 
 /**
  * Main plugin singleton. Mirrors Hail Connect's bootstrap so the two plugins share
@@ -44,6 +45,9 @@ class Hail_Mail_Connect {
     /** @var Hail_Mail_Connect_Shortcodes */
     public $shortcodes;
 
+    /** @var Hail_Mail_Connect_Updater */
+    public $updater;
+
     public static function instance() {
         if ( null === self::$instance ) {
             self::$instance = new self();
@@ -56,6 +60,7 @@ class Hail_Mail_Connect {
         $this->settings   = new Hail_Mail_Connect_Settings();
         $this->lists      = new Hail_Mail_Connect_Lists();
         $this->shortcodes = new Hail_Mail_Connect_Shortcodes();
+        $this->updater    = new Hail_Mail_Connect_Updater( __FILE__ );
 
         add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );

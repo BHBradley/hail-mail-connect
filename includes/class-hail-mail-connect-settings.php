@@ -35,7 +35,7 @@ class Hail_Mail_Connect_Settings {
         $existing = get_option( HAIL_MAIL_CONNECT_SETTINGS_KEY, array() );
         $clean    = is_array( $existing ) ? $existing : array();
 
-        foreach ( array( 'client_id', 'client_secret', 'organisation_id' ) as $key ) {
+        foreach ( array( 'client_id', 'client_secret', 'organisation_id', 'github_repo', 'github_token' ) as $key ) {
             if ( isset( $input[ $key ] ) ) {
                 $clean[ $key ] = sanitize_text_field( $input[ $key ] );
             }
@@ -139,6 +139,22 @@ class Hail_Mail_Connect_Settings {
                                 <?php esc_html_e( 'Leave OFF until Hail has whitelisted this Client ID for the studio scope. If enabled before then, Hail rejects the whole authorisation (HTTP 401) and the connect flow bounces to the login screen. You can connect now with this off, then enable it and reconnect once whitelisting is confirmed.', 'hail-mail-connect' ); ?>
                             </p>
                         </td>
+                    </tr>
+                </table>
+
+                <h2><?php esc_html_e( 'Updates', 'hail-mail-connect' ); ?></h2>
+                <p class="description"><?php esc_html_e( 'Enable one-click updates from the plugin\'s GitHub releases. The access token is only needed for a private repository (fine-grained PAT, Contents: Read-only).', 'hail-mail-connect' ); ?></p>
+                <table class="form-table" role="presentation">
+                    <tr>
+                        <th scope="row"><label for="hmc_github_repo"><?php esc_html_e( 'GitHub Repository', 'hail-mail-connect' ); ?></label></th>
+                        <td>
+                            <input type="text" id="hmc_github_repo" name="<?php echo esc_attr( HAIL_MAIL_CONNECT_SETTINGS_KEY ); ?>[github_repo]" value="<?php echo esc_attr( $settings['github_repo'] ?? '' ); ?>" class="regular-text" placeholder="BHBradley/hail-mail-connect" />
+                            <p class="description"><?php esc_html_e( 'owner/repo format. Leave blank to disable update checks.', 'hail-mail-connect' ); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="hmc_github_token"><?php esc_html_e( 'GitHub Access Token', 'hail-mail-connect' ); ?></label></th>
+                        <td><input type="password" id="hmc_github_token" name="<?php echo esc_attr( HAIL_MAIL_CONNECT_SETTINGS_KEY ); ?>[github_token]" value="<?php echo esc_attr( $settings['github_token'] ?? '' ); ?>" class="regular-text" autocomplete="off" /></td>
                     </tr>
                 </table>
                 <?php submit_button(); ?>

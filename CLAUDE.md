@@ -34,7 +34,8 @@ separate git repos, so a site may have one without the other.
 - `includes/class-hail-mail-connect-settings.php` — Connection settings (credentials, connect/disconnect, granted-scope display, studio opt-in checkbox, AJAX test)
 - `includes/class-hail-mail-connect-lists.php` — Mailing Lists index + **tabbed list detail**: WP Users tab (non-admin users, in-list checkboxes, Save via `admin-post` → studio add / content.write remove) + All Subscribers tab (Hail subscribers + WP-match). Carded tables, Hail palette, "Open in Hail Mail" deep link, search, pagination, `subscriber_index()` full-set fetch
 - `includes/class-hail-mail-connect-shortcodes.php` — `[hail_mail_subscribe]` self-service form + AJAX (WP-core login, studio-preferring add, content.write remove, WP_DEBUG-gated error detail)
-- `assets/css/{admin,public}.css`, `assets/js/{admin,public}.js`, `assets/img/menu-icon.svg`, `uninstall.php`, `.gitignore`
+- `includes/class-hail-mail-connect-updater.php` — GitHub Releases self-updater (ported from hail-connect): reads `github_repo`/`github_token` from settings, hooks the WP update transient, caches latest release 12h, injects auth headers, renames the zipball folder on install. Settings → **Updates** section. Releases are cut from tags on `main`.
+- `assets/css/{admin,public}.css`, `assets/js/{admin,public}.js`, `assets/img/menu-icon.svg`, `uninstall.php`, `.gitignore`, `README.md`
 
 ## Hail mail soft-unsubscribe semantics (verified in hail-master)
 

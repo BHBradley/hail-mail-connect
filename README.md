@@ -57,6 +57,20 @@ whitelisted for it, otherwise the authorisation will be rejected. Toggle it on t
 Settings page, then disconnect and reconnect to pick it up. Without studio, everything
 works except "add without opt-in" — adds fall back to the verifying endpoint.
 
+### Updates
+
+The plugin can update itself from its GitHub releases. Under **Hail Mail → Settings →
+Updates**, set:
+
+- **GitHub Repository** — `owner/repo` (e.g. `BHBradley/hail-mail-connect`). Leave blank
+  to disable update checks.
+- **GitHub Access Token** — only required for a **private** repo (a fine-grained PAT with
+  *Contents: Read-only*). Public repos work without one.
+
+To publish a release: bump the version in `hail-mail-connect.php`, merge to `main`, then
+draft a GitHub Release with a `vX.Y.Z` tag. Sites see the update in Dashboard → Updates
+within 12 hours (the cache window).
+
 ## Usage
 
 ### Admin — manage list membership
