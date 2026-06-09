@@ -89,17 +89,3 @@
 	color: #4b5563;
 }
 
-/* Logged-out login prompt wrapper (hosts the native WP login form or a wp-login link) */
-.hmc-subscribe--login .hmc-subscribe__intro {
-	margin-bottom: 14px;
-}
-.hmc-subscribe--login input[type="text"],
-.hmc-subscribe--login input[type="password"] {
-	width: 100%;
-	box-sizing: border-box;
-}
-.hmc-subscribe--login a.hmc-subscribe__save {
-	display: inline-block;
-	text-decoration: none;
-}
-

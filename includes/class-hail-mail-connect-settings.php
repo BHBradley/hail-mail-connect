@@ -196,11 +196,6 @@ class Hail_Mail_Connect_Settings {
                             <td><?php echo esc_html__( 'Save preferences', 'hail-mail-connect' ); ?></td>
                             <td><?php esc_html_e( 'Submit button label.', 'hail-mail-connect' ); ?></td>
                         </tr>
-                        <tr>
-                            <td><code>login</code></td>
-                            <td><code>form</code></td>
-                            <td><?php esc_html_e( 'Logged-out behaviour: form (native WP login form), link (wp-login link), or none.', 'hail-mail-connect' ); ?></td>
-                        </tr>
                     </tbody>
                 </table>
                 <p class="description"><?php esc_html_e( 'Example:', 'hail-mail-connect' ); ?> <code>[hail_mail_subscribe title="Newsletters" button="Update"]</code></p>

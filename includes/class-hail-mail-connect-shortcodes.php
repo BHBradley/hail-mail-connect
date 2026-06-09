@@ -44,24 +44,21 @@ class Hail_Mail_Connect_Shortcodes {
      * ------------------------------------------------------------------ */
 
     public function render_subscribe( $atts ) {
+        // Members-only: never render for unauthenticated visitors.
+        if ( ! is_user_logged_in() ) {
+            return '';
+        }
+
         $atts = shortcode_atts( array(
             'lists'  => '',
             'title'  => __( 'Manage your email subscriptions', 'hail-mail-connect' ),
             'button' => __( 'Save preferences', 'hail-mail-connect' ),
-            // Logged-out behaviour (WP core only, no third-party plugin dependency):
-            // 'form' renders the native wp_login_form on the page, 'link' shows a
-            // wp-login link, 'none' renders nothing.
-            'login'  => 'form',
         ), $atts, 'hail_mail_subscribe' );
 
         $api = Hail_Mail_Connect::instance()->api;
 
         if ( ! $api->is_connected() || ! $api->has_scope( 'content.write' ) ) {
             return $this->admin_only_notice( __( 'Hail Mail is not connected (or lacks the content.write scope), so the subscription form is hidden.', 'hail-mail-connect' ) );
-        }
-
-        if ( ! is_user_logged_in() ) {
-            return $this->login_prompt( $atts['login'], $atts['title'] );
         }
 
         $offered = $this->offered_lists( $api, $atts['lists'] );
@@ -219,44 +216,6 @@ class Hail_Mail_Connect_Shortcodes {
             'message'    => __( 'Your subscription preferences have been saved.', 'hail-mail-connect' ),
             'subscribed' => $desired,
         ) );
-    }
-
-    /**
-     * Logged-out prompt — WP core only, no third-party/membership-plugin dependency.
-     * Renders the native wp_login_form so the visitor can sign in and return to the
-     * same page (then sees the subscription form), or a plain wp-login link.
-     *
-     * @param string $mode  form|link|none
-     * @param string $title
-     */
-    private function login_prompt( $mode, $title ) {
-        $mode = in_array( $mode, array( 'form', 'link', 'none' ), true ) ? $mode : 'form';
-        if ( 'none' === $mode ) {
-            return '';
-        }
-
-        wp_enqueue_style( 'hail-mail-connect-public' );
-
-        $redirect = get_permalink();
-        if ( ! $redirect ) {
-            $redirect = home_url( '/' );
-        }
-
-        ob_start();
-        echo '<div class="hmc-subscribe hmc-subscribe--login">';
-        if ( '' !== $title ) {
-            echo '<h3 class="hmc-subscribe__title">' . esc_html( $title ) . '</h3>';
-        }
-        echo '<p class="hmc-subscribe__intro">' . esc_html__( 'Please log in to manage your email subscriptions.', 'hail-mail-connect' ) . '</p>';
-
-        if ( 'link' === $mode ) {
-            echo '<p><a class="hmc-subscribe__save" href="' . esc_url( wp_login_url( $redirect ) ) . '">' . esc_html__( 'Log in', 'hail-mail-connect' ) . '</a></p>';
-        } else {
-            // Native WordPress login form; redirects back to this page on success.
-            echo wp_login_form( array( 'redirect' => $redirect, 'echo' => false ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- core-generated markup
-        }
-        echo '</div>';
-        return ob_get_clean();
     }
 
     /* ------------------------------------------------------------------ *
