@@ -73,22 +73,6 @@ class Hail_Mail_Connect_Shortcodes {
         $contact = $api->find_contact_by_email( $user->user_email );
         $current = is_array( $contact ) ? $this->current_subscribed_list_ids( $contact ) : array();
 
-        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-            $dbg = array();
-            foreach ( (array) ( is_array( $contact ) ? ( $contact['lists'] ?? array() ) : array() ) as $l ) {
-                $u     = $l['pivot']['unsubscribed_date'] ?? ( $l['unsubscribed_date'] ?? null );
-                $dbg[] = ( $l['id'] ?? '?' ) . ':' . ( empty( $u ) ? 'sub' : 'unsub' );
-            }
-            $offered_ids = array();
-            foreach ( $offered as $o ) {
-                $offered_ids[] = $o['id'] ?? '?';
-            }
-            error_log( 'HMC form read — contact=' . ( is_array( $contact ) ? ( $contact['id'] ?? '?' ) : 'NONE' )
-                . ' offered=[' . implode( ',', $offered_ids ) . ']'
-                . ' contactLists=[' . implode( ',', $dbg ) . ']'
-                . ' current=[' . implode( ',', $current ) . ']' );
-        }
-
         wp_enqueue_style( 'hail-mail-connect-public' );
         wp_enqueue_script( 'hail-mail-connect-public' );
 
@@ -168,7 +152,6 @@ class Hail_Mail_Connect_Shortcodes {
         $to_remove  = array_diff( $current, $desired );
 
         $use_studio = $api->has_scope( 'studio' );
-        $debug      = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
         // Step 1: make sure the contact exists. If we couldn't resolve one (brand-new
         // email, OR a contact that was deleted in Hail so it no longer shows in search),
@@ -183,9 +166,6 @@ class Hail_Mail_Connect_Shortcodes {
                     'first_name' => $user->first_name,
                     'last_name'  => $user->last_name,
                 ) ) );
-                if ( $debug ) {
-                    error_log( 'HMC write — studio-create resp=' . ( is_wp_error( $r ) ? $r->get_error_message() : wp_json_encode( $r ) ) );
-                }
                 if ( is_wp_error( $r ) ) {
                     $errors[] = $this->log_op_error( 'studio-create', $r );
                 }
@@ -197,9 +177,6 @@ class Hail_Mail_Connect_Shortcodes {
             }
             $resolved   = $api->find_contact_by_email( $email );
             $contact_id = is_array( $resolved ) ? ( $resolved['id'] ?? '' ) : '';
-            if ( $debug ) {
-                error_log( 'HMC write — re-resolved contact_id=' . ( '' !== $contact_id ? $contact_id : 'NONE' ) );
-            }
         }
 
         // Step 2: force every desired list ACTIVE via content.write add-existing, which
@@ -211,9 +188,6 @@ class Hail_Mail_Connect_Shortcodes {
                 continue;
             }
             $r = $api->add_existing_subscribers_to_list( $list_id, array( $contact_id ) );
-            if ( $debug ) {
-                error_log( 'HMC write — add-existing ' . $list_id . ' resp=' . ( is_wp_error( $r ) ? $r->get_error_message() : wp_json_encode( $r ) ) );
-            }
             if ( is_wp_error( $r ) ) {
                 $errors[] = $this->log_op_error( 'add ' . $list_id, $r );
             }
