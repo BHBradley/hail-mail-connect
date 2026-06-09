@@ -168,6 +168,44 @@ class Hail_Mail_Connect_Settings {
                 <?php submit_button(); ?>
             </form>
 
+            <div class="hmc-section">
+                <h2><?php esc_html_e( 'Shortcode', 'hail-mail-connect' ); ?></h2>
+                <p class="description"><?php esc_html_e( 'Add a self-service subscription form to any page or post. Logged-in members manage their own list subscriptions; logged-out visitors see a WordPress login form.', 'hail-mail-connect' ); ?></p>
+                <p><code>[hail_mail_subscribe]</code></p>
+                <table class="widefat striped" style="max-width:760px;">
+                    <thead>
+                        <tr>
+                            <th><?php esc_html_e( 'Attribute', 'hail-mail-connect' ); ?></th>
+                            <th><?php esc_html_e( 'Default', 'hail-mail-connect' ); ?></th>
+                            <th><?php esc_html_e( 'Description', 'hail-mail-connect' ); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>lists</code></td>
+                            <td><em><?php esc_html_e( 'all subscribable', 'hail-mail-connect' ); ?></em></td>
+                            <td><?php esc_html_e( 'Comma-separated Hail list IDs to offer. Omit to show all subscribable lists.', 'hail-mail-connect' ); ?></td>
+                        </tr>
+                        <tr>
+                            <td><code>title</code></td>
+                            <td><?php echo esc_html__( 'Manage your email subscriptions', 'hail-mail-connect' ); ?></td>
+                            <td><?php esc_html_e( 'Heading shown above the form.', 'hail-mail-connect' ); ?></td>
+                        </tr>
+                        <tr>
+                            <td><code>button</code></td>
+                            <td><?php echo esc_html__( 'Save preferences', 'hail-mail-connect' ); ?></td>
+                            <td><?php esc_html_e( 'Submit button label.', 'hail-mail-connect' ); ?></td>
+                        </tr>
+                        <tr>
+                            <td><code>login</code></td>
+                            <td><code>form</code></td>
+                            <td><?php esc_html_e( 'Logged-out behaviour: form (native WP login form), link (wp-login link), or none.', 'hail-mail-connect' ); ?></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="description"><?php esc_html_e( 'Example:', 'hail-mail-connect' ); ?> <code>[hail_mail_subscribe title="Newsletters" button="Update"]</code></p>
+            </div>
+
             <?php
             $preview_client = $settings['client_id'] ?? '';
             $preview_scope  = $api->get_requested_scope();
