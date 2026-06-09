@@ -223,6 +223,40 @@
 	margin-top: 8px;
 }
 
+/* Click-to-copy mailing list IDs (shortcode reference) */
+.hmc .hmc-id-list {
+	list-style: none;
+	margin: 6px 0 0;
+	padding: 0;
+	max-width: 760px;
+}
+.hmc .hmc-id-list li {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 5px 0;
+	border-bottom: 1px solid #f0f2f4;
+}
+.hmc .hmc-id-list li:last-child {
+	border-bottom: 0;
+}
+.hmc .hmc-id-list__name {
+	min-width: 220px;
+	color: var(--hmc-ink);
+	font-weight: 600;
+}
+.hmc .hmc-copy {
+	cursor: pointer;
+}
+.hmc .hmc-copy code {
+	background: transparent;
+	padding: 0;
+}
+.hmc .hmc-copy.is-copied {
+	color: var(--hmc-green-700);
+	border-color: var(--hmc-green);
+}
+
 /* Connection status line on settings */
 .hmc .hmc-scopes code {
 	background: #f4f6f7;

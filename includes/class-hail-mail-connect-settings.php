@@ -199,6 +199,31 @@ class Hail_Mail_Connect_Settings {
                     </tbody>
                 </table>
                 <p class="description"><?php esc_html_e( 'Example:', 'hail-mail-connect' ); ?> <code>[hail_mail_subscribe title="Newsletters" button="Update"]</code></p>
+
+                <?php
+                // Click-to-copy mailing list IDs for the `lists` attribute (one extra
+                // API call per Settings load while connected).
+                $ref_lists = $api->is_connected() ? $api->get_mail_lists() : null;
+                if ( $ref_lists && ! is_wp_error( $ref_lists ) ) {
+                    $ref_lists = ( isset( $ref_lists['data'] ) && is_array( $ref_lists['data'] ) ) ? $ref_lists['data'] : ( is_array( $ref_lists ) ? $ref_lists : array() );
+                    if ( ! empty( $ref_lists ) ) {
+                        echo '<p class="description" style="margin-top:14px;">' . esc_html__( 'Mailing list IDs (click to copy):', 'hail-mail-connect' ) . '</p>';
+                        echo '<ul class="hmc-id-list">';
+                        foreach ( $ref_lists as $rl ) {
+                            $rid = $rl['id'] ?? '';
+                            if ( '' === $rid ) {
+                                continue;
+                            }
+                            $rname = $rl['name'] ?? $rid;
+                            echo '<li>'
+                                . '<span class="hmc-id-list__name">' . esc_html( $rname ) . '</span>'
+                                . '<button type="button" class="button button-small hmc-copy" data-copy="' . esc_attr( $rid ) . '" title="' . esc_attr__( 'Copy ID', 'hail-mail-connect' ) . '"><code>' . esc_html( $rid ) . '</code></button>'
+                                . '</li>';
+                        }
+                        echo '</ul>';
+                    }
+                }
+                ?>
             </div>
 
             <?php
